@@ -9,16 +9,24 @@ conn = Faraday.new(:url => 'http://localhost:9000') do |faraday|
   faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
 end
 
-socket = TCPSocket.open('localhost',4000)
-
-while line = socket.gets
+while true do
   begin
-    request = JSON.parse line.chomp
-    response = conn.get(request['path'])
-    puts socket.puts JSON.generate({'request' => request, 'response' => {'body' =>  Base64.encode64(response.body), 'status' => response.status, 'headers' => response.headers}})
+    socket = TCPSocket.open('localhost',4000)
+    puts "Connection successful"
+
+    while line = socket.gets
+      begin
+        request = JSON.parse line.chomp
+        response = conn.send(request['method'].downcase,request['path'],request['params'])
+        puts socket.puts JSON.generate({'request' => request, 'response' => {'body' =>  Base64.encode64(response.body), 'status' => response.status, 'headers' => response.headers}})
+      rescue => e
+        puts e.message
+      end
+    end
+    socket.close
   rescue => e
-    puts "Sulyedunk fater!"
     puts e.message
+    sleep 0.1
   end
+
 end
-socket.close
